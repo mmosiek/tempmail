@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TempMail</title>
+  <style>
+    body {max-width:900px;margin:40px auto;padding:0 20px;font-family:sans-serif;line-height:1.5;}
+    fieldset {margin:20px 0;padding:15px;}
+    input[type="text"] {padding:6px;font-family:monospace;}
+    button {padding:6px 12px;margin-right:5px;cursor:pointer;}
+    button:disabled {opacity:0.6;cursor:not-allowed;}
+    table {width:100%;border-collapse:collapse;margin-top:10px;}
+    td,th {padding:8px;text-align:left;border:1px solid #ddd;}
+    tr:hover {background:#f5f5f5;}
+    .message-detail {margin-top:20px;padding:15px;border:1px solid #ddd;background:#f9f9f9;display:none;}
+    .message-detail.active {display:block;}
+  </style>
+</head>
+<body>
+  <h1>TempMail</h1>
+  
+  <fieldset>
+    <legend>Email</legend>
+    <input type="text" id="emailDisplay" value="Click to generate!" readonly size="40" autocomplete="off"><br>
+    <div style="margin-top: 5px;">
+        <button id="generateBtn">Generate</button>
+        <button id="refreshBtn" style="display:none;">Refresh</button>
+        <button id="copyBtn" style="display:none;">Copy</button>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Messages (<span id="messageCount">0</span>)</legend>
+    <div id="messagesContainer">
+      <p>No messages</p>
+    </div>
+    
+    <div class="message-detail" id="messageDetail">
+      <button id="closeMessage">← Back</button>
+      <h2 id="detailSubject"></h2>
+      <p><b>From:</b> <span id="detailFrom"></span></p>
+      <p><b>Date:</b> <span id="detailDate"></span></p>
+      <hr>
+      <div id="detailBody"></div>
+    </div>
+  </fieldset>
+
+<script>
+(async ()=>{
+  const proxy='https://corsproxy.io/?';
+  const base='https://api.mail.gw';
+  const el=id=>document.getElementById(id);
+  let token,account,poll;
+  const COOLDOWN = 10; // seconds
+
+  const rnd=n=>'abcdefghijklmnopqrstuvwxyz0123456789'
+    .split('').map(()=>Math.random()<.5?String.fromCharCode(97+Math.floor(Math.random()*26)):Math.floor(Math.random()*10)).slice(0,n).join('');
+
+  async function domains(){
+    const r=await fetch(proxy+encodeURIComponent(base+'/domains'));
+    if(!r.ok)throw new Error('Domain error');
+    const j=await r.json();
+    return j['hydra:member'].map(d=>d.domain);
+  }
+
+  function startCooldown(){
+    let remaining = COOLDOWN;
+    const btn = el('generateBtn');
+    btn.disabled = true;
+    const originalText = 'Generate';
+    btn.textContent = `Wait ${remaining}s`;
+    const timer = setInterval(()=>{
+      remaining--;
+      if(remaining<=0){
+        clearInterval(timer);
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }else{
+        btn.textContent = `Wait ${remaining}s`;
+      }
+    },1000);
+  }
+
+  async function create(){
+    startCooldown();
+    try{
+      const ds=await domains();
+      const d=ds[Math.floor(Math.random()*ds.length)];
+      const addr=rnd(8)+'@'+d;
+      const pass=rnd(12);
+      const acc=await fetch(proxy+encodeURIComponent(base+'/accounts'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:addr,password:pass})});
+      if(!acc.ok)throw new Error('Account error');
+      const tok=await fetch(proxy+encodeURIComponent(base+'/token'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:addr,password:pass})});
+      if(!tok.ok)throw new Error('Token error');
+      const t=await tok.json();
+      token=t.token;account={address:addr,password:pass};
+      el('emailDisplay').value=addr;
+      el('copyBtn').style.display='inline';
+      el('refreshBtn').style.display='inline';
+      poll&&clearInterval(poll);
+      poll=setInterval(list,5000);
+      list();
+    }catch(e){alert('Error: '+e.message)}
+  }
+
+  async function list(){
+    if(!token)return;
+    const r=await fetch(proxy+encodeURIComponent(base+'/messages'),{headers:{Authorization:'Bearer '+token}});
+    if(!r.ok)return;
+    const j=await r.json();
+    const m=j['hydra:member']||[];
+    el('messageCount').textContent=m.length;
+    el('messagesContainer').innerHTML=m.length?'<table><tr><th>Subject</th><th>From</th><th>Date</th></tr>'+
+      m.map(v=>`<tr style="cursor:pointer" onclick="viewMessage('${v.id}')">
+        <td>${v.subject||'(no subject)'}</td>
+        <td>${v.from?.address||'Unknown'}</td>
+        <td>${new Date(v.createdAt).toLocaleString()}</td>
+      </tr>`).join('')+'</table>':`<p>No messages</p>`;
+  }
+
+  window.viewMessage=async id=>{
+    el('messagesContainer').style.display='none';
+    el('messageDetail').classList.add('active');
+    el('detailSubject').textContent='Loading...';
+    const r=await fetch(proxy+encodeURIComponent(base+'/messages/'+id),{headers:{Authorization:'Bearer '+token}});
+    if(!r.ok)return;
+    const m=await r.json();
+    el('detailSubject').textContent=m.subject||'(no subject)';
+    el('detailFrom').textContent=m.from?.address||'Unknown';
+    el('detailDate').textContent=new Date(m.createdAt).toLocaleString();
+    el('detailBody').innerHTML=m.html||m.text||'(no content)';
+  };
+
+  el('generateBtn').onclick=create;
+  el('refreshBtn').onclick=list;
+  el('copyBtn').onclick=()=>navigator.clipboard.writeText(account.address);
+
+  // click input: generate if no email, else copy
+  el('emailDisplay').onclick=()=>{
+    if(!account){
+      create();
+      return;
+    }
+    el('emailDisplay').select();
+    navigator.clipboard.writeText(account.address);
+  };
+
+  el('closeMessage').onclick=()=>{
+    el('messageDetail').classList.remove('active');
+    el('messagesContainer').style.display='block';
+  };
+})();
+</script>
+</body>
+</html>
