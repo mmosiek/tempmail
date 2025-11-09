@@ -10,7 +10,7 @@
     table {width:100%;}
     .message-detail {display:none;}
     .message-detail.active {display:block;}
-    #valid-helper {display:none;}
+    #valid-helper {display:none;color:var(--pico-color-green-500);}
   </style>
 </head>
 <body>
@@ -19,7 +19,7 @@
     
     <fieldset>
       <legend>Email</legend>
-      <input id="emailDisplay" type="text" value="Click to generate!" readonly aria-describedby="valid-helper">
+      <input id="emailDisplay" type="text" value="Click to generate!" autocomplete="off" readonly aria-describedby="valid-helper">
       <small id="valid-helper">Copied!</small>
 
       <div role="group">
@@ -128,6 +128,8 @@
           account = {address: addr, password: pass};
           $('emailDisplay').value = addr;
           $('refreshBtn').style.display = 'inline';
+          
+          await copyEmail();
           
           if (poll) clearInterval(poll);
           poll = setInterval(list, 5000);
