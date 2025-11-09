@@ -1,25 +1,45 @@
 <!doctype html>
 <html lang="en" data-theme="dark">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TempMail</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <style>
-    body {max-width:900px;margin:40px auto;padding:0 20px;}
-    table {width:100%;}
-    .message-detail {display:none;}
-    .message-detail.active {display:block;}
-    #valid-helper {display:none;color:var(--pico-color-green-500);}
+    body {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    table {
+      width: 100%;
+    }
+
+    .message-detail {
+      display: none;
+    }
+
+    .message-detail.active {
+      display: block;
+    }
+
+    #valid-helper {
+      display: none;
+      color: var(--pico-color-green-500);
+    }
   </style>
 </head>
+
 <body>
   <main class="container">
     <h1><i data-lucide="inbox"></i> TempMail</h1>
-    
+
     <fieldset>
       <legend>Email</legend>
-      <input id="emailDisplay" type="text" value="Click to generate!" autocomplete="off" readonly aria-describedby="valid-helper">
+      <input id="emailDisplay" type="text" value="Click to generate!" autocomplete="off" readonly
+        aria-describedby="valid-helper">
       <small id="valid-helper">Copied!</small>
 
       <div role="group">
@@ -34,8 +54,10 @@
 
     <fieldset>
       <legend>Messages (<span id="messageCount">0</span>)</legend>
-      <div id="messagesContainer"><p>No messages</p></div>
-      
+      <div id="messagesContainer">
+        <p>No messages</p>
+      </div>
+
       <div class="message-detail" id="messageDetail">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:0.5rem;">
           <button id="closeMessage" style="padding:6px 10px">
@@ -43,20 +65,18 @@
           </button>
           <h2 id="detailSubject" style="margin:0;font-size:1.25rem;flex:1;"></h2>
         </div>
-        <p><b>From:</b> <span id="detailFrom"></span></p>
-        <p><b>Date:</b> <span id="detailDate"></span></p>
+
+        <p style="margin:0;"><b>From:</b> <span id="detailFrom"></span></p>
+        <p style="margin:0;"><b>Date:</b> <span id="detailDate"></span></p>
+
         <hr>
         <div id="detailBody" style="word-wrap:break-word;"></div>
       </div>
     </fieldset>
 
-  <footer class="container" style="padding:0.5rem;text-align:center;font-size:0.9rem;">
-    <p>
-      <small>
-        Made by <a href="https://github.com/mmosiek" class="secondary" target="_blank">mmosiek</a>, Source on <a href="https://github.com/mmosiek/tempmail" class="secondary" target="_blank">GitHub</a>.
-      </small>
-    </p>
-  </footer>
+    <footer style="padding:0.5rem;text-align:center;font-size:0.9rem;">
+      <small>Built by <a href="https://github.com/mmosiek" class="secondary" target="_blank">mmosiek</a></small>
+    </footer>
   </main>
 
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -70,8 +90,8 @@
       let token, account, poll;
       const COOLDOWN = 10;
 
-      const rnd = n => Array.from({length: n}, () => 
-        Math.random() < 0.5 
+      const rnd = n => Array.from({ length: n }, () =>
+        Math.random() < 0.5
           ? String.fromCharCode(97 + Math.floor(Math.random() * 26))
           : Math.floor(Math.random() * 10)
       ).join('');
@@ -95,7 +115,7 @@
         btn.disabled = true;
         btn.textContent = `Wait ${remaining}s`;
         btn.setAttribute('aria-busy', 'true');
-        
+
         const timer = setInterval(() => {
           if (--remaining < 0) {
             clearInterval(timer);
@@ -115,26 +135,26 @@
           const ds = await domains();
           const addr = rnd(8) + '@' + ds[Math.floor(Math.random() * ds.length)];
           const pass = rnd(12);
-          
+
           await apiCall('/accounts', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({address: addr, password: pass})
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: addr, password: pass })
           });
-          
-          const {token: t} = await apiCall('/token', {
+
+          const { token: t } = await apiCall('/token', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({address: addr, password: pass})
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: addr, password: pass })
           });
-          
+
           token = t;
-          account = {address: addr, password: pass};
+          account = { address: addr, password: pass };
           $('emailDisplay').value = addr;
           $('refreshBtn').style.display = 'inline';
-          
+
           await copyEmail();
-          
+
           if (poll) clearInterval(poll);
           poll = setInterval(list, 5000);
           list();
@@ -154,14 +174,14 @@
 
         try {
           const data = await apiCall('/messages', {
-            headers: {Authorization: 'Bearer ' + token}
+            headers: { Authorization: 'Bearer ' + token }
           });
-          
+
           const msgs = data['hydra:member'] || [];
           $('messageCount').textContent = msgs.length;
           $('messagesContainer').innerHTML = msgs.length
             ? '<table class="striped"><tr><th>Subject</th><th>From</th><th>Date</th></tr>' +
-              msgs.map(m => `<tr style="cursor:pointer" onclick="viewMessage('${m.id}')">
+            msgs.map(m => `<tr style="cursor:pointer" onclick="viewMessage('${m.id}')">
                 <td>${m.subject || '(no subject)'}</td>
                 <td>${m.from?.address || 'Unknown'}</td>
                 <td>${new Date(m.createdAt).toLocaleString()}</td>
@@ -183,12 +203,12 @@
         $('messagesContainer').style.display = 'none';
         $('messageDetail').classList.add('active');
         $('detailSubject').textContent = 'Loading...';
-        
+
         try {
           const m = await apiCall('/messages/' + id, {
-            headers: {Authorization: 'Bearer ' + token}
+            headers: { Authorization: 'Bearer ' + token }
           });
-          
+
           $('detailSubject').textContent = m.subject || '(no subject)';
           $('detailFrom').textContent = m.from?.address || 'Unknown';
           $('detailDate').textContent = new Date(m.createdAt).toLocaleString();
@@ -231,5 +251,5 @@
     })();
   </script>
 </body>
-</html>
 
+</html>
