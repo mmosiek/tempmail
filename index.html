@@ -5,171 +5,224 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TempMail</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-
   <style>
     body {max-width:900px;margin:40px auto;padding:0 20px;}
     table {width:100%;}
     .message-detail {display:none;}
     .message-detail.active {display:block;}
+    #valid-helper {display:none;}
   </style>
 </head>
 <body>
   <main class="container">
-    <h1>TempMail</h1>
+    <h1><i data-lucide="inbox"></i> TempMail</h1>
     
-    <fieldset class="flow">
+    <fieldset>
       <legend>Email</legend>
-      <input type="text" id="emailDisplay" value="Click to generate!" readonly size="40" autocomplete="off">
+      <input id="emailDisplay" type="text" value="Click to generate!" readonly aria-describedby="valid-helper">
+      <small id="valid-helper">Copied!</small>
+
       <div role="group">
-          <button id="generateBtn" class="contrast">Generate</button>
-          <button id="refreshBtn" style="display:none;" class="secondary">Refresh</button>
-          <button id="copyBtn" style="display:none;" class="secondary">Copy</button>
+        <button id="generateBtn" class="contrast">
+          <i data-lucide="mail"></i> Generate
+        </button>
+        <button id="refreshBtn" class="secondary" style="display:none;">
+          <i data-lucide="refresh-cw"></i> Refresh
+        </button>
       </div>
     </fieldset>
 
-    <fieldset class="flow">
+    <fieldset>
       <legend>Messages (<span id="messageCount">0</span>)</legend>
-      <div id="messagesContainer">
-        <p>No messages</p>
-      </div>
+      <div id="messagesContainer"><p>No messages</p></div>
       
-      <div class="message-detail" id="messageDetail" style="margin-top:1rem;">
+      <div class="message-detail" id="messageDetail">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:0.5rem;">
-          <button id="closeMessage" class="secondary" style="padding:4px 10px;font-size:0.9rem;">← Back</button>
-          <h2 id="detailSubject" style="margin:0;font-size:1.25rem;font-weight:600;flex:1;"></h2>
-      </div>
-        <p style="margin:0.25rem 0;"><b>From:</b> <span id="detailFrom"></span></p>
-        <p style="margin:0.25rem 0 0.75rem 0;"><b>Date:</b> <span id="detailDate"></span></p>
-      <hr style="margin:0.75rem 0;">
-      <div id="detailBody" style="word-wrap:break-word;"></div>
+          <button id="closeMessage" style="padding:6px 10px">
+            <i data-lucide="circle-arrow-left"></i> Back
+          </button>
+          <h2 id="detailSubject" style="margin:0;font-size:1.25rem;flex:1;"></h2>
+        </div>
+        <p><b>From:</b> <span id="detailFrom"></span></p>
+        <p><b>Date:</b> <span id="detailDate"></span></p>
+        <hr>
+        <div id="detailBody" style="word-wrap:break-word;"></div>
       </div>
     </fieldset>
-    <footer class="container" style="padding:0.5rem;text-align:center;font-size:0.9rem;">
-    <p>
-      <small>
-        Made by <a href="https://github.com/mmosiek" class="secondary" target="_blank">mmosiek</a>, Source on <a href="https://github.com/mmosiek/tempmail" class="secondary" target="_blank">GitHub</a>.
-      </small>
-    </p>
-  </footer>
+
+    <footer style="padding:0.5rem;text-align:center;font-size:0.9rem;">
+      <small>Built by <a href="https://github.com/mmosiek" class="secondary" target="_blank">mmosiek</a></small>
+    </footer>
   </main>
 
-<script>
-(async ()=>{
-  const proxy='https://corsproxy.io/?';
-  const base='https://api.mail.gw';
-  const el=id=>document.getElementById(id);
-  let token,account,poll;
-  const COOLDOWN = 10;
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    lucide.createIcons();
 
-  const rnd=n=>'abcdefghijklmnopqrstuvwxyz0123456789'
-    .split('').map(()=>Math.random()<.5?String.fromCharCode(97+Math.floor(Math.random()*26)):Math.floor(Math.random()*10)).slice(0,n).join('');
+    (async () => {
+      const proxy = 'https://corsproxy.io/?';
+      const base = 'https://api.mail.gw';
+      const $ = id => document.getElementById(id);
+      let token, account, poll;
+      const COOLDOWN = 10;
 
-  async function domains(){
-    const r=await fetch(proxy+encodeURIComponent(base+'/domains'));
-    if(!r.ok)throw new Error('Domain error');
-    const j=await r.json();
-    return j['hydra:member'].map(d=>d.domain);
-  }
+      const rnd = n => Array.from({length: n}, () => 
+        Math.random() < 0.5 
+          ? String.fromCharCode(97 + Math.floor(Math.random() * 26))
+          : Math.floor(Math.random() * 10)
+      ).join('');
 
-  function startCooldown(){
-    let remaining = COOLDOWN;
-    const btn = el('generateBtn');
-    btn.disabled = true;
-    const originalText = 'Generate';
-    btn.textContent = `Wait ${remaining}s`;
-    const timer = setInterval(()=>{
-      remaining--;
-      if(remaining<=0){
-        clearInterval(timer);
-        btn.disabled = false;
-        btn.textContent = originalText;
-      }else{
-        btn.textContent = `Wait ${remaining}s`;
+      async function apiCall(endpoint, options = {}) {
+        const url = proxy + encodeURIComponent(base + endpoint);
+        const res = await fetch(url, options);
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+        return res.json();
       }
-    },1000);
-  }
 
-  async function create(){
-    startCooldown();
-    try{
-      const ds=await domains();
-      const d=ds[Math.floor(Math.random()*ds.length)];
-      const addr=rnd(8)+'@'+d;
-      const pass=rnd(12);
-      const acc=await fetch(proxy+encodeURIComponent(base+'/accounts'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:addr,password:pass})});
-      if(!acc.ok)throw new Error('Account error');
-      const tok=await fetch(proxy+encodeURIComponent(base+'/token'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:addr,password:pass})});
-      if(!tok.ok)throw new Error('Token error');
-      const t=await tok.json();
-      token=t.token;account={address:addr,password:pass};
-      el('emailDisplay').value=addr;
-      el('emailDisplay').setAttribute('aria-invalid', 'false');
-      setTimeout(()=>el('emailDisplay').removeAttribute('aria-invalid'), 1000);
-      el('copyBtn').style.display='inline';
-      el('refreshBtn').style.display='inline';
-      poll&&clearInterval(poll);
-      poll=setInterval(list,5000);
-      list();
-    }catch(e){alert('Error: '+e.message)}
-  }
+      async function domains() {
+        const data = await apiCall('/domains');
+        return data['hydra:member'].map(d => d.domain);
+      }
 
-  async function list(){
-    if(!token)return;
-    const r=await fetch(proxy+encodeURIComponent(base+'/messages'),{headers:{Authorization:'Bearer '+token}});
-    if(!r.ok)return;
-    const j=await r.json();
-    const m=j['hydra:member']||[];
-    el('messageCount').textContent=m.length;
-    el('messagesContainer').innerHTML=m.length?'<table class="striped"><tr><th>Subject</th><th>From</th><th>Date</th></tr>'+
-      m.map(v=>`<tr style="cursor:pointer" onclick="viewMessage('${v.id}')">
-        <td>${v.subject||'(no subject)'}</td>
-        <td>${v.from?.address||'Unknown'}</td>
-        <td>${new Date(v.createdAt).toLocaleString()}</td>
-      </tr>`).join('')+'</table>':`<p>No messages</p>`;
-  }
+      function startCooldown() {
+        let remaining = COOLDOWN;
+        const btn = $('generateBtn');
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.textContent = `Wait ${remaining}s`;
+        btn.setAttribute('aria-busy', 'true');
+        
+        const timer = setInterval(() => {
+          if (--remaining < 0) {
+            clearInterval(timer);
+            btn.disabled = false;
+            btn.removeAttribute('aria-busy');
+            btn.innerHTML = original;
+            lucide.createIcons();
+          } else {
+            btn.textContent = `Wait ${remaining}s`;
+          }
+        }, 1000);
+      }
 
-  window.viewMessage=async id=>{
-    el('messagesContainer').style.display='none';
-    el('messageDetail').classList.add('active');
-    el('detailSubject').textContent='Loading...';
-    const r=await fetch(proxy+encodeURIComponent(base+'/messages/'+id),{headers:{Authorization:'Bearer '+token}});
-    if(!r.ok)return;
-    const m=await r.json();
-    el('detailSubject').textContent=m.subject||'(no subject)';
-    el('detailFrom').textContent=m.from?.address||'Unknown';
-    el('detailDate').textContent=new Date(m.createdAt).toLocaleString();
-    el('detailBody').innerHTML=m.html||m.text||'(no content)';
-  };
+      async function create() {
+        startCooldown();
+        try {
+          const ds = await domains();
+          const addr = rnd(8) + '@' + ds[Math.floor(Math.random() * ds.length)];
+          const pass = rnd(12);
+          
+          await apiCall('/accounts', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({address: addr, password: pass})
+          });
+          
+          const {token: t} = await apiCall('/token', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({address: addr, password: pass})
+          });
+          
+          token = t;
+          account = {address: addr, password: pass};
+          $('emailDisplay').value = addr;
+          $('refreshBtn').style.display = 'inline';
+          
+          if (poll) clearInterval(poll);
+          poll = setInterval(list, 5000);
+          list();
+        } catch (e) {
+          alert('Error: ' + e.message);
+        }
+      }
 
-  el('generateBtn').onclick=create;
-  el('refreshBtn').onclick=list;
+      async function list() {
+        if (!token) return;
 
-  el('copyBtn').onclick=()=>{
-    if(!account)return;
-    navigator.clipboard.writeText(account.address);
-    el('emailDisplay').setAttribute('aria-invalid', 'false');
-    setTimeout(()=>el('emailDisplay').removeAttribute('aria-invalid'), 500);
-  };
+        const btn = $('refreshBtn');
+        const original = btn.innerHTML;
+        btn.innerHTML = '';
+        btn.setAttribute('aria-busy', 'true');
+        btn.disabled = true;
 
-  el('emailDisplay').onclick=()=>{
-    if(!account){
-      create();
-      return;
-    }
-    el('emailDisplay').select();
-    navigator.clipboard.writeText(account.address);
-    el('emailDisplay').setAttribute('aria-invalid', 'false');
-    setTimeout(()=>el('emailDisplay').removeAttribute('aria-invalid'), 500);
-  };
+        try {
+          const data = await apiCall('/messages', {
+            headers: {Authorization: 'Bearer ' + token}
+          });
+          
+          const msgs = data['hydra:member'] || [];
+          $('messageCount').textContent = msgs.length;
+          $('messagesContainer').innerHTML = msgs.length
+            ? '<table class="striped"><tr><th>Subject</th><th>From</th><th>Date</th></tr>' +
+              msgs.map(m => `<tr style="cursor:pointer" onclick="viewMessage('${m.id}')">
+                <td>${m.subject || '(no subject)'}</td>
+                <td>${m.from?.address || 'Unknown'}</td>
+                <td>${new Date(m.createdAt).toLocaleString()}</td>
+              </tr>`).join('') + '</table>'
+            : '<p>No messages</p>';
+        } catch (e) {
+          console.error('List error:', e);
+        } finally {
+          setTimeout(() => {
+            btn.removeAttribute('aria-busy');
+            btn.disabled = false;
+            btn.innerHTML = original;
+            lucide.createIcons();
+          }, 500);
+        }
+      }
 
-  el('closeMessage').onclick=()=>{
-    el('messageDetail').classList.remove('active');
-    el('messagesContainer').style.display='block';
-  };
-})();
-</script>
+      window.viewMessage = async id => {
+        $('messagesContainer').style.display = 'none';
+        $('messageDetail').classList.add('active');
+        $('detailSubject').textContent = 'Loading...';
+        
+        try {
+          const m = await apiCall('/messages/' + id, {
+            headers: {Authorization: 'Bearer ' + token}
+          });
+          
+          $('detailSubject').textContent = m.subject || '(no subject)';
+          $('detailFrom').textContent = m.from?.address || 'Unknown';
+          $('detailDate').textContent = new Date(m.createdAt).toLocaleString();
+          $('detailBody').innerHTML = m.html || m.text || '(no content)';
+        } catch (e) {
+          console.error('View error:', e);
+        }
+      };
+
+      async function copyEmail() {
+        const input = $('emailDisplay');
+        const helper = $('valid-helper');
+        if (!account) return;
+
+        input.select();
+        await navigator.clipboard.writeText(input.value);
+        input.setAttribute('aria-invalid', 'false');
+        helper.style.display = 'block';
+
+        setTimeout(() => {
+          input.removeAttribute('aria-invalid');
+          helper.style.display = 'none';
+        }, 1500);
+      }
+
+      $('generateBtn').onclick = create;
+      $('refreshBtn').onclick = list;
+      $('emailDisplay').onclick = async () => {
+        $('emailDisplay').select();
+        if (!account) {
+          await create();
+        } else {
+          await copyEmail();
+        }
+      };
+      $('closeMessage').onclick = () => {
+        $('messageDetail').classList.remove('active');
+        $('messagesContainer').style.display = 'block';
+      };
+    })();
+  </script>
 </body>
 </html>
-
-
-
