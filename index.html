@@ -35,14 +35,16 @@
         <p>No messages</p>
       </div>
       
-      <div class="message-detail" id="messageDetail">
-        <button id="closeMessage" class="secondary">← Back</button>
-        <h2 id="detailSubject"></h2>
-        <p><b>From:</b> <span id="detailFrom"></span></p>
-        <p><b>Date:</b> <span id="detailDate"></span></p>
-        <hr>
-        <div id="detailBody"></div>
+      <div class="message-detail" id="messageDetail" style="margin-top:1rem;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:0.5rem;">
+          <button id="closeMessage" class="secondary" style="padding:4px 10px;font-size:0.9rem;">← Back</button>
+          <h2 id="detailSubject" style="margin:0;font-size:1.25rem;font-weight:600;flex:1;"></h2>
       </div>
+        <p style="margin:0.25rem 0;"><b>From:</b> <span id="detailFrom"></span></p>
+        <p style="margin:0.25rem 0 0.75rem 0;"><b>Date:</b> <span id="detailDate"></span></p>
+      <hr style="margin:0.75rem 0;">
+      <div id="detailBody" style="word-wrap:break-word;"></div>
+    </div>
     </fieldset>
   </main>
 
@@ -122,7 +124,7 @@
   window.viewMessage=async id=>{
     el('messagesContainer').style.display='none';
     el('messageDetail').classList.add('active');
-    el('detailSubject').textContent='Loading...';
+    el('detailSubject').textContent='';
     const r=await fetch(proxy+encodeURIComponent(base+'/messages/'+id),{headers:{Authorization:'Bearer '+token}});
     if(!r.ok)return;
     const m=await r.json();
