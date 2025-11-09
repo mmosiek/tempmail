@@ -8,7 +8,6 @@
 
   <style>
     body {max-width:900px;margin:40px auto;padding:0 20px;}
-    fieldset {margin:20px 0;}
     table {width:100%;}
     tr:hover {background-color:rgba(255,255,255,0.05);}
     .message-detail {display:none;}
@@ -16,16 +15,16 @@
   </style>
 </head>
 <body>
-  <main>
+  <main class="container">
     <h1>TempMail</h1>
     
-    <fieldset>
+    <fieldset class="flow">
       <legend>Email</legend>
       <input type="text" id="emailDisplay" value="Click to generate!" readonly size="40" autocomplete="off">
-      <div>
-          <button id="generateBtn">Generate</button>
-          <button id="refreshBtn" style="display:none;">Refresh</button>
-          <button id="copyBtn" style="display:none;">Copy</button>
+      <div role="group">
+          <button id="generateBtn" class="contrast">Generate</button>
+          <button id="refreshBtn" style="display:none;" class="secondary">Refresh</button>
+          <button id="copyBtn" style="display:none;" class="secondary">Copy</button>
       </div>
     </fieldset>
 
@@ -44,7 +43,7 @@
         <p style="margin:0.25rem 0 0.75rem 0;"><b>Date:</b> <span id="detailDate"></span></p>
       <hr style="margin:0.75rem 0;">
       <div id="detailBody" style="word-wrap:break-word;"></div>
-    </div>
+      </div>
     </fieldset>
   </main>
 
@@ -98,6 +97,8 @@
       const t=await tok.json();
       token=t.token;account={address:addr,password:pass};
       el('emailDisplay').value=addr;
+      el('emailDisplay').setAttribute('aria-invalid', 'false');
+      setTimeout(()=>el('emailDisplay').removeAttribute('aria-invalid'), 1500);
       el('copyBtn').style.display='inline';
       el('refreshBtn').style.display='inline';
       poll&&clearInterval(poll);
@@ -113,7 +114,7 @@
     const j=await r.json();
     const m=j['hydra:member']||[];
     el('messageCount').textContent=m.length;
-    el('messagesContainer').innerHTML=m.length?'<table><tr><th>Subject</th><th>From</th><th>Date</th></tr>'+
+    el('messagesContainer').innerHTML=m.length?'<table class="striped"><tr><th>Subject</th><th>From</th><th>Date</th></tr>'+
       m.map(v=>`<tr style="cursor:pointer" onclick="viewMessage('${v.id}')">
         <td>${v.subject||'(no subject)'}</td>
         <td>${v.from?.address||'Unknown'}</td>
@@ -124,7 +125,7 @@
   window.viewMessage=async id=>{
     el('messagesContainer').style.display='none';
     el('messageDetail').classList.add('active');
-    el('detailSubject').textContent='';
+    el('detailSubject').textContent='Loading...';
     const r=await fetch(proxy+encodeURIComponent(base+'/messages/'+id),{headers:{Authorization:'Bearer '+token}});
     if(!r.ok)return;
     const m=await r.json();
