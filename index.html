@@ -1,50 +1,50 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TempMail</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+
   <style>
-    body {max-width:900px;margin:40px auto;padding:0 20px;font-family:sans-serif;line-height:1.5;}
-    fieldset {margin:20px 0;padding:15px;}
-    input[type="text"] {padding:6px;font-family:monospace;}
-    button {padding:6px 12px;margin-right:5px;cursor:pointer;}
-    button:disabled {opacity:0.6;cursor:not-allowed;}
-    table {width:100%;border-collapse:collapse;margin-top:10px;}
-    td,th {padding:8px;text-align:left;border:1px solid #ddd;}
-    tr:hover {background:#f5f5f5;}
-    .message-detail {margin-top:20px;padding:15px;border:1px solid #ddd;background:#f9f9f9;display:none;}
+    body {max-width:900px;margin:40px auto;padding:0 20px;}
+    fieldset {margin:20px 0;}
+    table {width:100%;}
+    tr:hover {background-color:rgba(255,255,255,0.05);}
+    .message-detail {display:none;}
     .message-detail.active {display:block;}
   </style>
 </head>
 <body>
-  <h1>TempMail</h1>
-  
-  <fieldset>
-    <legend>Email</legend>
-    <input type="text" id="emailDisplay" value="Click to generate!" readonly size="40" autocomplete="off"><br>
-    <div style="margin-top: 5px;">
-        <button id="generateBtn">Generate</button>
-        <button id="refreshBtn" style="display:none;">Refresh</button>
-        <button id="copyBtn" style="display:none;">Copy</button>
-    </div>
-  </fieldset>
-
-  <fieldset>
-    <legend>Messages (<span id="messageCount">0</span>)</legend>
-    <div id="messagesContainer">
-      <p>No messages</p>
-    </div>
+  <main>
+    <h1>TempMail</h1>
     
-    <div class="message-detail" id="messageDetail">
-      <button id="closeMessage">← Back</button>
-      <h2 id="detailSubject"></h2>
-      <p><b>From:</b> <span id="detailFrom"></span></p>
-      <p><b>Date:</b> <span id="detailDate"></span></p>
-      <hr>
-      <div id="detailBody"></div>
-    </div>
-  </fieldset>
+    <fieldset>
+      <legend>Email</legend>
+      <input type="text" id="emailDisplay" value="Click to generate!" readonly size="40" autocomplete="off">
+      <div>
+          <button id="generateBtn">Generate</button>
+          <button id="refreshBtn" style="display:none;">Refresh</button>
+          <button id="copyBtn" style="display:none;">Copy</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Messages (<span id="messageCount">0</span>)</legend>
+      <div id="messagesContainer">
+        <p>No messages</p>
+      </div>
+      
+      <div class="message-detail" id="messageDetail">
+        <button id="closeMessage" class="secondary">← Back</button>
+        <h2 id="detailSubject"></h2>
+        <p><b>From:</b> <span id="detailFrom"></span></p>
+        <p><b>Date:</b> <span id="detailDate"></span></p>
+        <hr>
+        <div id="detailBody"></div>
+      </div>
+    </fieldset>
+  </main>
 
 <script>
 (async ()=>{
@@ -52,7 +52,7 @@
   const base='https://api.mail.gw';
   const el=id=>document.getElementById(id);
   let token,account,poll;
-  const COOLDOWN = 10; // seconds
+  const COOLDOWN = 10;
 
   const rnd=n=>'abcdefghijklmnopqrstuvwxyz0123456789'
     .split('').map(()=>Math.random()<.5?String.fromCharCode(97+Math.floor(Math.random()*26)):Math.floor(Math.random()*10)).slice(0,n).join('');
@@ -136,7 +136,6 @@
   el('refreshBtn').onclick=list;
   el('copyBtn').onclick=()=>navigator.clipboard.writeText(account.address);
 
-  // click input: generate if no email, else copy
   el('emailDisplay').onclick=()=>{
     if(!account){
       create();
