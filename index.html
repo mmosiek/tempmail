@@ -45,10 +45,10 @@
       <div id="detailBody" style="word-wrap:break-word;"></div>
       </div>
     </fieldset>
-  <footer class="container" style="padding:0.5rem;text-align:center;font-size:0.9rem;">
+    <footer class="container" style="padding:0.5rem;text-align:center;font-size:0.9rem;">
     <p>
       <small>
-        Made by <a href="https://github.com/mmosiek" class="secondary" target="_blank">mmosiek</a>, Source on <a href="https://github.com/mmosiek/tempmail" class="secondary" target="_blank">GitHub</a>.
+        Built by <a href="https://github.com/mmosiek" class="secondary" target="_blank">mmosiek</a>
       </small>
     </p>
   </footer>
@@ -105,7 +105,7 @@
       token=t.token;account={address:addr,password:pass};
       el('emailDisplay').value=addr;
       el('emailDisplay').setAttribute('aria-invalid', 'false');
-      setTimeout(()=>el('emailDisplay').removeAttribute('aria-invalid'), 1500);
+      setTimeout(()=>el('emailDisplay').removeAttribute('aria-invalid'), 1000);
       el('copyBtn').style.display='inline';
       el('refreshBtn').style.display='inline';
       poll&&clearInterval(poll);
@@ -144,7 +144,13 @@
 
   el('generateBtn').onclick=create;
   el('refreshBtn').onclick=list;
-  el('copyBtn').onclick=()=>navigator.clipboard.writeText(account.address);
+
+  el('copyBtn').onclick=()=>{
+    if(!account)return;
+    navigator.clipboard.writeText(account.address);
+    el('emailDisplay').setAttribute('aria-invalid', 'false');
+    setTimeout(()=>el('emailDisplay').removeAttribute('aria-invalid'), 500);
+  };
 
   el('emailDisplay').onclick=()=>{
     if(!account){
@@ -153,6 +159,8 @@
     }
     el('emailDisplay').select();
     navigator.clipboard.writeText(account.address);
+    el('emailDisplay').setAttribute('aria-invalid', 'false');
+    setTimeout(()=>el('emailDisplay').removeAttribute('aria-invalid'), 500);
   };
 
   el('closeMessage').onclick=()=>{
@@ -163,6 +171,3 @@
 </script>
 </body>
 </html>
-
-
-
