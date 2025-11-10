@@ -93,7 +93,7 @@
         const btn = $('generateBtn');
         const original = btn.innerHTML;
         btn.disabled = true;
-        btn.textContent = `Wait ${remaining}s`;
+        btn.textContent = `Cooldown ${remaining}s`;
 
         const timer = setInterval(() => {
           if (--remaining < 0) {
@@ -102,7 +102,7 @@
             btn.innerHTML = original;
             lucide.createIcons();
           } else {
-            btn.textContent = `Wait ${remaining}s`;
+            btn.textContent = `Cooldown ${remaining}s`;
           }
         }, 1000);
       }
@@ -223,3 +223,4 @@
   </script>
 </body>
 </html>
+
