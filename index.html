@@ -69,7 +69,7 @@
       const base = 'https://api.mail.tm';
       const $ = id => document.getElementById(id);
       let token, account, poll;
-      const COOLDOWN = 10;
+      const COOLDOWN = 30;
 
       const rnd = n => Array.from({ length: n }, () =>
         Math.random() < 0.5
@@ -223,4 +223,5 @@
   </script>
 </body>
 </html>
+
 
