@@ -173,7 +173,7 @@
       window.viewMessage = async id => {
         $('messagesContainer').style.display = 'none';
         $('messageDetail').classList.add('active');
-        $('detailSubject').textContent = 'Loading...';
+        $('detailSubject').textContent = '';
 
         try {
           const m = await apiCall('/messages/' + id, {
@@ -223,5 +223,6 @@
   </script>
 </body>
 </html>
+
 
 
