@@ -56,13 +56,13 @@
       </div>
     </fieldset>
 
-  <footer class="container" style="padding:0.5rem;text-align:center;font-size:0.9rem;">
-    <p>
-      <small>
-        Made by <a href="https://github.com/mmosiek" class="secondary" target="_blank">mmosiek</a>, Source on <a href="https://github.com/mmosiek/tempmail" class="secondary" target="_blank">GitHub</a>.
-      </small>
-    </p>
-  </footer>
+    <footer class="container" style="padding:0.5rem;text-align:center;font-size:0.9rem;">
+      <p>
+        <small>
+          Made by <a href="https://github.com/mmosiek" class="secondary" target="_blank">mmosiek</a>, Source on <a href="https://github.com/mmosiek/tempmail" class="secondary" target="_blank">GitHub</a>.
+        </small>
+      </p>
+    </footer>
   </main>
 
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -162,7 +162,7 @@
             msgs.map(m => `<tr style="cursor:pointer" onclick="viewMessage('${m.id}')">
                 <td>${m.subject || '(no subject)'}</td>
                 <td>${m.from?.address || 'Unknown'}</td>
-                <td>${new Date(m.createdAt).toLocaleString()}</td>
+                <td>${m.createdAt ? new Date(m.createdAt).toLocaleString() : 'Unknown'}</td>
               </tr>`).join('') + '</table>'
             : '<p>No messages</p>';
         } catch (e) {
@@ -177,7 +177,6 @@
       window.viewMessage = async id => {
         $('messagesContainer').style.display = 'none';
         $('messageDetail').classList.add('active');
-        $('detailSubject').textContent = '';
 
         try {
           const m = await apiCall('/messages/' + id, {
@@ -186,10 +185,18 @@
 
           $('detailSubject').textContent = m.subject || '(no subject)';
           $('detailFrom').textContent = m.from?.address || 'Unknown';
-          $('detailDate').textContent = new Date(m.createdAt).toLocaleString();
-          $('detailBody').innerHTML = m.html || m.text || '(no content)';
+          $('detailDate').textContent = m.createdAt ? new Date(m.createdAt).toLocaleString() : 'Unknown';
+          
+          if (m.html) {
+            $('detailBody').innerHTML = m.html;
+          } else if (m.text) {
+            $('detailBody').textContent = m.text;
+          } else {
+            $('detailBody').textContent = '(no content)';
+          }
         } catch (e) {
           console.error('View error:', e);
+          $('detailBody').textContent = 'Error loading message';
         }
       };
 
@@ -227,7 +234,3 @@
   </script>
 </body>
 </html>
-
-
-
-
