@@ -11,7 +11,6 @@
     table { width: 100%; }
     .message-detail { display: none; }
     .message-detail.active { display: block; }
-    #valid-helper { display: none; color: var(--pico-color-green-500); }
   </style>
 </head>
 
@@ -21,13 +20,9 @@
 
     <fieldset>
       <legend>Email</legend>
-      <input id="emailDisplay" type="text" value="Click to generate!" autocomplete="off" readonly aria-describedby="valid-helper">
-      <small id="valid-helper">Copied!</small>
+      <input id="emailDisplay" type="text" value="Generating..." autocomplete="off" readonly>
 
       <div role="group">
-        <button id="generateBtn" class="contrast">
-          <i data-lucide="mail"></i> Generate
-        </button>
         <button id="refreshBtn" class="secondary" style="display:none;">
           <i data-lucide="refresh-cw"></i> Refresh
         </button>
@@ -73,7 +68,6 @@
       const base = 'https://api.mail.tm';
       const $ = id => document.getElementById(id);
       let token, account, poll;
-      const COOLDOWN = 30;
 
       const rnd = n => Array.from({ length: n }, () =>
         Math.random() < 0.5
@@ -92,27 +86,7 @@
         return data['hydra:member'].map(d => d.domain);
       }
 
-      function startCooldown() {
-        let remaining = COOLDOWN;
-        const btn = $('generateBtn');
-        const original = btn.innerHTML;
-        btn.disabled = true;
-        btn.textContent = `Cooldown ${remaining}s`;
-
-        const timer = setInterval(() => {
-          if (--remaining < 0) {
-            clearInterval(timer);
-            btn.disabled = false;
-            btn.innerHTML = original;
-            lucide.createIcons();
-          } else {
-            btn.textContent = `Cooldown ${remaining}s`;
-          }
-        }, 1000);
-      }
-
       async function create() {
-        startCooldown();
         try {
           const ds = await domains();
           const addr = rnd(8) + '@' + ds[Math.floor(Math.random() * ds.length)];
@@ -186,7 +160,7 @@
           $('detailSubject').textContent = m.subject || '(no subject)';
           $('detailFrom').textContent = m.from?.address || 'Unknown';
           $('detailDate').textContent = m.createdAt ? new Date(m.createdAt).toLocaleString() : 'Unknown';
-          
+
           if (m.html) {
             $('detailBody').innerHTML = m.html;
           } else if (m.text) {
@@ -202,34 +176,26 @@
 
       async function copyEmail() {
         const input = $('emailDisplay');
-        const helper = $('valid-helper');
         if (!account) return;
 
         input.select();
         await navigator.clipboard.writeText(input.value);
-        input.setAttribute('aria-invalid', 'false');
-        helper.style.display = 'block';
-
-        setTimeout(() => {
-          input.removeAttribute('aria-invalid');
-          helper.style.display = 'none';
-        }, 1500);
       }
 
-      $('generateBtn').onclick = create;
       $('refreshBtn').onclick = list;
       $('emailDisplay').onclick = async () => {
         $('emailDisplay').select();
-        if (!account) {
-          await create();
-        } else {
+        if (account) {
           await copyEmail();
         }
       };
+
       $('closeMessage').onclick = () => {
         $('messageDetail').classList.remove('active');
         $('messagesContainer').style.display = 'block';
       };
+
+      create();
     })();
   </script>
 </body>
