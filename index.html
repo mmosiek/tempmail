@@ -109,8 +109,6 @@
           $('emailDisplay').value = addr;
           $('refreshBtn').style.display = 'inline';
 
-          await copyEmail();
-
           if (poll) clearInterval(poll);
           poll = setInterval(list, 5000);
           list();
